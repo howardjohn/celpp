@@ -11,6 +11,7 @@ var All = []cel.Macro{
 	Default,
 	Oneof,
 	Index,
+	UnrollMap,
 }
 
 var (
@@ -67,6 +68,44 @@ var (
 			final := mef.NewCall(operators.Conditional, check, selects(mef, base, args...), mef.NewLiteral(types.NullValue))
 			return final, nil
 		})
+
+	// UnrollMap provides a specialized macro to unroll a loop. This works around bugs in older Kubernetes versions cost estimation.
+	// Usage: `self.unrollmap(0, 3, x, x.matches.size())`
+	// Instead of `self.map(x, x.matches.size())`.
+	// The unrolling will *always* create a list of N elements (3 in above example), unlike map.
+	// Since the input list may not be that size, you also need a zero-value to fill in gaps (0 in above example)
+	UnrollMap = cel.ReceiverVarArgMacro("unrollmap",
+		func(mef cel.MacroExprFactory, base celast.Expr, args []celast.Expr) (celast.Expr, *cel.Error) {
+			if len(args) == 0 {
+				return nil, mef.NewError(base.ID(), "unrollmap requires at 4 args")
+			}
+			zero := args[0]
+			count := (args[1].AsLiteral().Value()).(int64)
+			varname := args[2]
+			expr := args[3]
+			items := []celast.Expr{}
+			for n := range count {
+				sizeCheck := mef.NewCall(operators.Greater,
+					mef.NewCall("size", base),
+					mef.NewLiteral(types.Int(n)),
+				)
+				expr := mef.NewCall(operators.Index,
+					mef.NewMemberCall(operators.Map,
+						mef.NewList(mef.NewCall(operators.Index, base, mef.NewLiteral(types.Int(n)))),
+						varname,
+						expr,
+					),
+					mef.NewLiteral(types.Int(0)),
+				)
+				clause := mef.NewCall(operators.Conditional,
+					sizeCheck,
+					expr,
+					zero,
+				)
+				items = append(items, clause)
+			}
+			return mef.NewList(items...), nil
+		})
 )
 
 func selects(mef cel.MacroExprFactory, base celast.Expr, fields ...celast.Expr) celast.Expr {
@@ -75,6 +114,7 @@ func selects(mef cel.MacroExprFactory, base celast.Expr, fields ...celast.Expr) 
 	}
 	return base
 }
+
 func foldl[T any](slice []T, combine func(T, T) T) T {
 	result := slice[0]
 	for _, v := range slice[1:] {

@@ -2,6 +2,7 @@ package celpp
 
 import (
 	"fmt"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common"
 	celast "github.com/google/cel-go/common/ast"
@@ -43,3 +44,21 @@ func (p *Preprocessor) Process(expr string) (string, error) {
 	}
 	return out, nil
 }
+
+/*
+func (p *Preprocessor) DumpAST(expr string) (string, error) {
+	ast, err := p.ProcessToAST(expr)
+	if err != nil {
+		return "", err
+	}
+	c, err := celast.ToProto(ast)
+	if err != nil {
+		return "", nil
+	}
+	b, err := (&protojson.MarshalOptions{Indent: "  "}).Marshal(c)
+	if err != nil {
+		return "", nil
+	}
+	return string(b), nil
+}
+*/
