@@ -9,9 +9,9 @@ import (
 
 func Example_builtinIndex() {
 	parser, _ := celpp.New(macros.All...)
-	output, _ := parser.Process("self.index(x, z, b)")
+	output, _ := parser.Process("self.index({}, x, z, b)")
 	fmt.Println(output)
-	// Output: (has(self.x) && has(self.x.z) && has(self.x.z.b)) ? self.x.z.b : null
+	// Output: (has(self.x) && has(self.x.z) && has(self.x.z.b)) ? self.x.z.b : {}
 }
 
 func Example_builtinDefault() {

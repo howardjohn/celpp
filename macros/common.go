@@ -48,24 +48,24 @@ var (
 		})
 
 	// Index provides the index() custom macro.
-	// Usage: `self.index(x, z, b)`
-	// This does a nil-safe traversal of
+	// Usage: `self.index({}, x, z, b)`
+	// This does a nil-safe traversal of self.x.z.b. If any field is nil, the first arg ({} here) is returned.
 	Index = cel.ReceiverVarArgMacro("index",
 		func(mef cel.MacroExprFactory, base celast.Expr, args []celast.Expr) (celast.Expr, *cel.Error) {
-			if len(args) == 0 {
-				return nil, mef.NewError(base.ID(), "index requires at least 1 arg")
+			if len(args) < 2 {
+				return nil, mef.NewError(base.ID(), "index requires at least 2 arg")
 			}
+			zero := args[0]
 			checks := []celast.Expr{}
-			for i := range args {
-
-				next := mef.NewCall(operators.Has, selects(mef, base, args[0:i+1]...))
+			for i := range args[1:] {
+				next := mef.NewCall(operators.Has, selects(mef, base, args[1:i+2]...))
 				checks = append(checks, next)
 			}
 			check := foldl(checks, func(l, r celast.Expr) celast.Expr {
 				return mef.NewCall(operators.LogicalAnd, l, r)
 			})
 
-			final := mef.NewCall(operators.Conditional, check, selects(mef, base, args...), mef.NewLiteral(types.NullValue))
+			final := mef.NewCall(operators.Conditional, check, selects(mef, base, args[1:]...), zero)
 			return final, nil
 		})
 
