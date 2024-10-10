@@ -33,10 +33,14 @@ func foldl[T any](slice []T,  combine func(T, T) T) T {
 	return result
 }
 
+//func simpleBuilder(name string,)
+
 func main() {
 	expr := os.Args[1]
 	prsr, err := parser.NewParser(
 		parser.Macros(
+			// Usage: `self.index(x, z, b)`
+			// This does a nil-safe traversal of
 			cel.ReceiverVarArgMacro("index",
 				func(mef cel.MacroExprFactory, base celast.Expr, args []celast.Expr) (celast.Expr, *cel.Error) {
 					if len(args) == 0 {
@@ -56,6 +60,30 @@ func main() {
 					final := mef.NewCall(operators.Conditional, check, selects(mef, base, args...), mef.NewLiteral(types.NullValue))
 					return final, nil
 				}),
+			// Usage: `oneof(self.x, self.y, self.z)`
+			// This checks that 0 or 1 of these fields is set, mirroring Protobuf one-of checking logic.
+			cel.GlobalVarArgMacro("oneof",
+				func(mef cel.MacroExprFactory, base celast.Expr, args []celast.Expr) (celast.Expr, *cel.Error) {
+					if len(args) < 2 {
+						return nil, mef.NewError(base.ID(), "oneof requires at least 2 arg")
+					}
+					checks := []celast.Expr{}
+					for _, arg  := range args{
+
+						has := mef.NewCall(operators.Has, arg)
+					logExpr("sum", arg)
+						check := mef.NewCall(operators.Conditional, has, mef.NewLiteral(types.Int(1)), mef.NewLiteral(types.Int(0)))
+						checks = append(checks, check)
+					}
+					sum := foldl(checks, func(l, r celast.Expr) celast.Expr {
+						return mef.NewCall(operators.Add, l, r)
+					})
+
+					final := mef.NewCall(operators.LessEquals, sum, mef.NewLiteral(types.Int(1)))
+					return final, nil
+				}),
+			// Usage: `default(self.x, 'DEF')`.
+			// This returns self.x if its set, else 'DEF'
 			cel.GlobalMacro("default", 2,
 				func(mef cel.MacroExprFactory, iterRange celast.Expr, args []celast.Expr) (celast.Expr, *cel.Error) {
 					has := mef.NewCall(operators.Has, args[0])
