@@ -1,11 +1,8 @@
 module github.com/howardjohn/celpp
 
-go 1.23.2
+go 1.22.0
 
-require (
-	github.com/golang/protobuf v1.5.3
-	github.com/google/cel-go v0.21.0
-)
+require github.com/google/cel-go v0.21.0
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
