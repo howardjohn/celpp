@@ -17,4 +17,4 @@ Output: `(has(self.x) && has(self.x.z) && has(self.x.z.b)) ? self.x.z.b : null`
 
 ## Status
 
-This is a complete WIP at this point, but I will likely pick up work in the future.
+This is a WIP at this point, but I will likely pick up work in the future.
